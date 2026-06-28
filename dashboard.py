@@ -101,4 +101,10 @@ def show():
         st.info("You're in Second Class Upper. A little extra effort can get you to First Class.")
 
     elif latest >= 2.40:
-        st.warning("You're in Second Class Lower. Stay focused—you
+        st.warning("You're in Second Class Lower. Stay focused—you can still improve your CGPA.")
+
+    elif latest >= 1.50:
+        st.warning("You're currently in Third Class. Every semester is a chance to climb higher.")
+
+    else:
+        st.error("Your CGPA needs serious attention. Stay determined and improve one course at a time.")
