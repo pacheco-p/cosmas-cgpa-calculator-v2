@@ -1,168 +1,168 @@
-import streamlit as st
-import auth
-import dashboard
-import calculator
-import history
-import profile
-
-st.set_page_config(
-    page_title="Cosmas CGPA Calculator",
-    page_icon="🎓",
-    layout="wide"
-)
+import sqlite3
 
 # -----------------------------
-# Session State
+# Database Connection
 # -----------------------------
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+conn = sqlite3.connect("users.db", check_same_thread=False)
+cursor = conn.cursor()
 
-if "username" not in st.session_state:
-    st.session_state.username = ""
 
 # -----------------------------
-# LOGIN / SIGNUP
+# Initialize Database
 # -----------------------------
-if not st.session_state.logged_in:
+def init_db():
 
-    col1, col2, col3 = st.columns([1, 2, 1])
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+    )
+    """)
 
-    with col2:
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS history(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        gpa REAL NOT NULL,
+        cgpa REAL NOT NULL,
+        total_cu INTEGER NOT NULL,
+        total_qp REAL NOT NULL,
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
 
-        try:
-            st.image("cosmas_banner.png", use_container_width=True)
-        except:
-            st.title("🏛️ COSMAS AT SUG TOP SEAT")
+    conn.commit()
 
-        st.title("🎓 Cosmas CGPA Calculator")
-        st.caption("Support • Pray • Canvass")
 
-        login_tab, signup_tab = st.tabs(
-            ["🔑 Login", "📝 Create Account"]
-        )
+init_db()
 
-        # LOGIN
-        with login_tab:
-
-            username = st.text_input(
-                "Username",
-                key="login_username"
-            )
-
-            password = st.text_input(
-                "Password",
-                type="password",
-                key="login_password"
-            )
-
-            if st.button(
-                "Login",
-                use_container_width=True
-            ):
-
-                if auth.login(
-                    username,
-                    password
-                ):
-
-                    st.session_state.logged_in = True
-                    st.session_state.username = username
-                    st.rerun()
-
-                else:
-                    st.error("Invalid username or password.")
-
-        # SIGNUP
-        with signup_tab:
-
-            username = st.text_input(
-                "Choose Username",
-                key="signup_username"
-            )
-
-            email = st.text_input(
-                "Email Address"
-            )
-
-            password = st.text_input(
-                "Password",
-                type="password",
-                key="signup_password"
-            )
-
-            confirm = st.text_input(
-                "Confirm Password",
-                type="password"
-            )
-
-            if st.button(
-                "Create Account",
-                use_container_width=True
-            ):
-
-                if password != confirm:
-                    st.error("Passwords do not match.")
-
-                elif len(password) < 6:
-                    st.warning("Password must contain at least 6 characters.")
-
-                elif auth.register(
-                    username,
-                    email,
-                    password
-                ):
-                    st.success(
-                        "Account created successfully! Please login."
-                    )
-
-                else:
-                    st.error(
-                        "Username or Email already exists."
-                    )
 
 # -----------------------------
-# MAIN APP
+# USER FUNCTIONS
 # -----------------------------
-else:
+def create_user(username, email, password):
 
     try:
-        st.sidebar.image(
-            "cosmas_banner.png",
-            use_container_width=True
+        cursor.execute(
+            """
+            INSERT INTO users(username, email, password)
+            VALUES(?,?,?)
+            """,
+            (username, email, password)
         )
-    except:
-        pass
 
-    st.sidebar.success(
-        f"Welcome {st.session_state.username}"
+        conn.commit()
+
+        return True
+
+    except sqlite3.IntegrityError:
+        return False
+
+
+def get_user(username):
+
+    cursor.execute(
+        """
+        SELECT *
+        FROM users
+        WHERE username=?
+        """,
+        (username,)
     )
 
-    page = st.sidebar.radio(
-        "Navigation",
-        [
-            "🏠 Dashboard",
-            "🎓 CGPA Calculator",
-            "📊 History",
-            "👤 Profile"
-        ]
+    return cursor.fetchone()
+
+
+def get_email(email):
+
+    cursor.execute(
+        """
+        SELECT *
+        FROM users
+        WHERE email=?
+        """,
+        (email,)
     )
 
-    st.sidebar.divider()
+    return cursor.fetchone()
 
-    if st.sidebar.button("🚪 Logout"):
 
-        st.session_state.logged_in = False
-        st.session_state.username = ""
-        st.rerun()
+# -----------------------------
+# HISTORY FUNCTIONS
+# -----------------------------
+def save_history(username, gpa, cgpa, total_cu, total_qp):
 
-    if page == "🏠 Dashboard":
-        dashboard.show()
+    cursor.execute(
+        """
+        INSERT INTO history(
+            username,
+            gpa,
+            cgpa,
+            total_cu,
+            total_qp
+        )
+        VALUES(?,?,?,?,?)
+        """,
+        (
+            username,
+            gpa,
+            cgpa,
+            total_cu,
+            total_qp
+        )
+    )
 
-    elif page == "🎓 CGPA Calculator":
-        calculator.show()
+    conn.commit()
 
-    elif page == "📊 History":
-        history.show()
 
-    elif page == "👤 Profile":
-        profile.show()
+def get_history(username):
+
+    cursor.execute(
+        """
+        SELECT
+            id,
+            gpa,
+            cgpa,
+            total_cu,
+            total_qp,
+            date
+        FROM history
+        WHERE username=?
+        ORDER BY date DESC
+        """,
+        (username,)
+    )
+
+    return cursor.fetchall()
+
+
+def delete_history(record_id):
+
+    cursor.execute(
+        """
+        DELETE FROM history
+        WHERE id=?
+        """,
+        (record_id,)
+    )
+
+    conn.commit()
+
+
+def get_statistics(username):
+
+    cursor.execute(
+        """
+        SELECT
+            COUNT(*),
+            MAX(cgpa),
+            AVG(cgpa)
+        FROM history
+        WHERE username=?
+        """,
+        (username,)
+    )
+
+    return cursor.fetchone()
