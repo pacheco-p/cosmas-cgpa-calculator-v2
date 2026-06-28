@@ -2,50 +2,64 @@ import bcrypt
 import database
 
 
+# -----------------------------
+# Hash Password
+# -----------------------------
 def hash_password(password):
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    return bcrypt.hashpw(
+        password.encode(),
+        bcrypt.gensalt()
+    ).decode()
 
 
-def check_password(password, hashed_password):
-    return bcrypt.checkpw(password.encode(), hashed_password.encode())
-
-
-def register(username, email, password):
-
-    hashed = hash_password(password)
-
-    try:
-        database.cursor.execute(
-            """
-            INSERT INTO users(username,email,password)
-            VALUES(?,?,?)
-            """,
-            (username, email, hashed)
-        )
-
-        database.conn.commit()
-
-        return True
-
-    except:
-
-        return False
-
-
-def login(username, password):
-
-    database.cursor.execute(
-        """
-        SELECT password
-        FROM users
-        WHERE username=?
-        """,
-        (username,)
+# -----------------------------
+# Verify Password
+# -----------------------------
+def verify_password(password, hashed):
+    return bcrypt.checkpw(
+        password.encode(),
+        hashed.encode()
     )
 
-    user = database.cursor.fetchone()
 
-    if not user:
+# -----------------------------
+# Register User
+# -----------------------------
+def register(username, email, password):
+
+    username = username.strip()
+    email = email.strip().lower()
+
+    if database.get_user(username):
+        return False, "Username already exists."
+
+    if database.get_email(email):
+        return False, "Email already exists."
+
+    hashed_password = hash_password(password)
+
+    database.create_user(
+        username,
+        email,
+        hashed_password
+    )
+
+    return True, "Account created successfully."
+
+
+# -----------------------------
+# Login User
+# -----------------------------
+def login(username, password):
+
+    user = database.get_user(username)
+
+    if user is None:
         return False
 
-    return check_password(password, user[0])
+    stored_password = user[3]
+
+    return verify_password(
+        password,
+        stored_password
+    )
