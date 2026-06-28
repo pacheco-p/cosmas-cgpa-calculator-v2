@@ -6,7 +6,7 @@ import history
 import profile
 
 # -----------------------------
-# Page Config
+# PAGE CONFIG
 # -----------------------------
 st.set_page_config(
     page_title="Cosmas CGPA Calculator",
@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # -----------------------------
-# Session State
+# SESSION STATE
 # -----------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -24,7 +24,7 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 # -----------------------------
-# LOGIN / SIGNUP
+# LOGIN / SIGNUP PAGE
 # -----------------------------
 if not st.session_state.logged_in:
 
@@ -32,11 +32,9 @@ if not st.session_state.logged_in:
 
     with col2:
 
+        # Campaign Banner
         try:
-            st.image(
-                "assets/cosmas_banner.png",
-                use_container_width=True
-            )
+            st.image("assets/cosmas_banner.png", use_container_width=True)
         except:
             st.title("🏛️ COSMAS AT SUG TOP SEAT")
 
@@ -48,6 +46,7 @@ if not st.session_state.logged_in:
         )
 
         # ---------------- LOGIN ----------------
+
         with login_tab:
 
             username = st.text_input(
@@ -70,24 +69,28 @@ if not st.session_state.logged_in:
 
                     st.session_state.logged_in = True
                     st.session_state.username = username
+
+                    st.success("Login Successful!")
+
                     st.rerun()
 
                 else:
 
                     st.error(
-                        "Invalid username or password."
+                        "Invalid Username or Password."
                     )
 
         # ---------------- SIGN UP ----------------
+
         with signup_tab:
 
             username = st.text_input(
-                "Username",
+                "Choose Username",
                 key="signup_username"
             )
 
             email = st.text_input(
-                "Email"
+                "Email Address"
             )
 
             password = st.text_input(
@@ -113,7 +116,7 @@ if not st.session_state.logged_in:
                 elif len(password) < 6:
 
                     st.warning(
-                        "Password must contain at least 6 characters."
+                        "Password must be at least 6 characters."
                     )
 
                 else:
@@ -137,6 +140,7 @@ if not st.session_state.logged_in:
 # -----------------------------
 else:
 
+    # Sidebar Banner
     try:
         st.sidebar.image(
             "assets/cosmas_banner.png",
@@ -168,10 +172,11 @@ else:
 
         st.session_state.logged_in = False
         st.session_state.username = ""
+
         st.rerun()
 
     # -----------------------------
-    # Pages
+    # PAGES
     # -----------------------------
 
     if page == "🏠 Dashboard":
