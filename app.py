@@ -5,6 +5,9 @@ import calculator
 import history
 import profile
 
+# -----------------------------
+# Page Config
+# -----------------------------
 st.set_page_config(
     page_title="Cosmas CGPA Calculator",
     page_icon="🎓",
@@ -30,7 +33,10 @@ if not st.session_state.logged_in:
     with col2:
 
         try:
-            st.image("cosmas_banner.png", use_container_width=True)
+            st.image(
+                "assets/cosmas_banner.png",
+                use_container_width=True
+            )
         except:
             st.title("🏛️ COSMAS AT SUG TOP SEAT")
 
@@ -41,7 +47,7 @@ if not st.session_state.logged_in:
             ["🔑 Login", "📝 Create Account"]
         )
 
-        # LOGIN
+        # ---------------- LOGIN ----------------
         with login_tab:
 
             username = st.text_input(
@@ -60,28 +66,28 @@ if not st.session_state.logged_in:
                 use_container_width=True
             ):
 
-                if auth.login(
-                    username,
-                    password
-                ):
+                if auth.login(username, password):
 
                     st.session_state.logged_in = True
                     st.session_state.username = username
                     st.rerun()
 
                 else:
-                    st.error("Invalid username or password.")
 
-        # SIGNUP
+                    st.error(
+                        "Invalid username or password."
+                    )
+
+        # ---------------- SIGN UP ----------------
         with signup_tab:
 
             username = st.text_input(
-                "Choose Username",
+                "Username",
                 key="signup_username"
             )
 
             email = st.text_input(
-                "Email Address"
+                "Email"
             )
 
             password = st.text_input(
@@ -101,40 +107,46 @@ if not st.session_state.logged_in:
             ):
 
                 if password != confirm:
+
                     st.error("Passwords do not match.")
 
                 elif len(password) < 6:
-                    st.warning("Password must contain at least 6 characters.")
 
-                elif auth.register(
-                    username,
-                    email,
-                    password
-                ):
-                    st.success(
-                        "Account created successfully! Please login."
+                    st.warning(
+                        "Password must contain at least 6 characters."
                     )
 
                 else:
-                    st.error(
-                        "Username or Email already exists."
+
+                    success, message = auth.register(
+                        username,
+                        email,
+                        password
                     )
 
+                    if success:
+
+                        st.success(message)
+
+                    else:
+
+                        st.error(message)
+
 # -----------------------------
-# MAIN APP
+# MAIN APPLICATION
 # -----------------------------
 else:
 
     try:
         st.sidebar.image(
-            "cosmas_banner.png",
+            "assets/cosmas_banner.png",
             use_container_width=True
         )
     except:
         pass
 
     st.sidebar.success(
-        f"Welcome {st.session_state.username}"
+        f"Welcome, {st.session_state.username}"
     )
 
     page = st.sidebar.radio(
@@ -149,11 +161,18 @@ else:
 
     st.sidebar.divider()
 
-    if st.sidebar.button("🚪 Logout"):
+    if st.sidebar.button(
+        "🚪 Logout",
+        use_container_width=True
+    ):
 
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.rerun()
+
+    # -----------------------------
+    # Pages
+    # -----------------------------
 
     if page == "🏠 Dashboard":
         dashboard.show()
