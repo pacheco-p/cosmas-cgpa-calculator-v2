@@ -1,47 +1,61 @@
 import streamlit as st
 import pandas as pd
+import io
 import database
-
-grades = {
-    "A": 5,
-    "B": 4,
-    "C": 3,
-    "D": 2,
-    "E": 1,
-    "F": 0
-}
 
 
 def show():
 
     st.title("🎓 CGPA Calculator")
 
+    # -----------------------------
+    # Session State
+    # -----------------------------
     if "courses" not in st.session_state:
         st.session_state.courses = []
 
-    st.subheader("Previous Record")
+    # -----------------------------
+    # Previous Record
+    # -----------------------------
+    st.subheader("Previous Academic Record")
 
-    prev_cu = st.number_input(
-        "Previous Total Credit Units",
-        min_value=0,
-        value=0
-    )
+    col1, col2 = st.columns(2)
 
-    prev_qp = st.number_input(
-        "Previous Total Quality Points",
-        min_value=0.0,
-        value=0.0
-    )
+    with col1:
+        prev_cu = st.number_input(
+            "Previous Credit Units",
+            min_value=0,
+            value=0
+        )
+
+    with col2:
+        prev_qp = st.number_input(
+            "Previous Quality Points",
+            min_value=0.0,
+            value=0.0
+        )
 
     st.divider()
 
+    grades = {
+        "A": 5,
+        "B": 4,
+        "C": 3,
+        "D": 2,
+        "E": 1,
+        "F": 0
+    }
+
+    # -----------------------------
+    # Add Course
+    # -----------------------------
     with st.form("course_form"):
 
-        course = st.text_input("Course Code")
+        code = st.text_input("Course Code")
 
-        col1, col2 = st.columns(2)
+        c1, c2 = st.columns(2)
 
-        with col1:
+        with c1:
             cu = st.number_input(
                 "Credit Units",
                 1,
@@ -49,56 +63,51 @@ def show():
                 3
             )
 
-        with col2:
+        with c2:
             grade = st.selectbox(
                 "Grade",
                 list(grades.keys())
             )
 
-        add = st.form_submit_button("Add Course")
+        add = st.form_submit_button("➕ Add Course")
 
         if add:
 
-            if course.strip() == "":
+            code = code.strip().upper()
+
+            if code == "":
                 st.error("Enter a course code.")
+
+            elif any(x["Course"] == code for x in st.session_state.courses):
+                st.warning("Course already added.")
 
             else:
 
                 st.session_state.courses.append({
 
-                    "Course": course.upper(),
-
+                    "Course": code,
                     "Credit Units": cu,
-
                     "Grade": grade,
-
                     "GP": grades[grade],
-
                     "Quality Points": cu * grades[grade]
 
                 })
 
-                st.success(f"{course.upper()} added.")
+                st.success(f"{code} added successfully.")
 
+    # -----------------------------
+    # Display Courses
+    # -----------------------------
     if st.session_state.courses:
 
         df = pd.DataFrame(st.session_state.courses)
 
-        st.subheader("Courses")
-
-        st.dataframe(
-            df,
-            use_container_width=True
-        )
-
         total_cu = df["Credit Units"].sum()
-
         total_qp = df["Quality Points"].sum()
 
-        gpa = total_qp / total_cu
+        semester_gpa = total_qp / total_cu
 
         grand_cu = prev_cu + total_cu
-
         grand_qp = prev_qp + total_qp
 
         cgpa = grand_qp / grand_cu
@@ -109,51 +118,103 @@ def show():
 
         c1.metric(
             "Semester GPA",
-            f"{gpa:.2f}"
+            f"{semester_gpa:.2f}"
         )
 
         c2.metric(
-            "CGPA",
+            "Cumulative CGPA",
             f"{cgpa:.2f}"
         )
 
+        # Classification
         if cgpa >= 4.50:
             st.success("🏆 First Class")
-
         elif cgpa >= 3.50:
             st.info("🥇 Second Class Upper")
-
         elif cgpa >= 2.40:
             st.info("🥈 Second Class Lower")
-
         elif cgpa >= 1.50:
             st.warning("🎓 Third Class")
-
         else:
-            st.error("⚠ Pass")
+            st.error("⚠️ Pass")
 
-        col1, col2 = st.columns(2)
+        st.divider()
 
-        if col1.button("💾 Save Result"):
+        st.subheader("Courses")
+
+        st.dataframe(
+            df[
+                [
+                    "Course",
+                    "Credit Units",
+                    "Grade",
+                    "Quality Points"
+                ]
+            ],
+            use_container_width=True
+        )
+
+        # Delete Course
+        course = st.selectbox(
+            "Delete Course",
+            df["Course"]
+        )
+
+        if st.button("Delete"):
+
+            st.session_state.courses = [
+
+                c for c in st.session_state.courses
+
+                if c["Course"] != course
+
+            ]
+
+            st.rerun()
+
+        st.divider()
+
+        # Save History
+        if st.button("💾 Save Result"):
 
             database.save_history(
 
                 st.session_state.username,
 
-                float(gpa),
+                semester_gpa,
 
-                float(cgpa),
+                cgpa,
 
-                int(grand_cu),
+                grand_cu,
 
-                float(grand_qp)
+                grand_qp
 
             )
 
-            st.success("Result saved successfully.")
+            st.success("Calculation saved.")
 
-        if col2.button("🗑 Clear Courses"):
+        st.divider()
 
-            st.session_state.courses = []
+        # CSV Export
+        csv = io.BytesIO()
 
-            st.rerun()
+        df.to_csv(
+            csv,
+            index=False
+        )
+
+        st.download_button(
+
+            "📥 Download CSV",
+
+            csv.getvalue(),
+
+            "cgpa_result.csv",
+
+            "text/csv"
+
+        )
+
+    else:
+
+        st.info("No courses added yet.")
